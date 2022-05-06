@@ -10,7 +10,9 @@ import android.util.Base64;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.IOException;
+import java.io.BufferedReader;
 import java.lang.Exception;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,9 +119,30 @@ public class Chooser extends CordovaPlugin {
             file.put("mediaType", mediaType);
             file.put("name", name);
             file.put("uri", uri.toString());
+            file.put("content", readFile(uri));
         } catch (JSONException err) {
             this.callback.error("Processing failed: " + err.toString());
         }
         return file;
     }
+
+    private String readFile (Uri uri) {
+        try {
+            ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
+            InputStream in = contentResolver.openInputStream(uri);
+            BufferedReader r = new BufferedReader(new InputStreamReader(in));
+            StringBuilder total = new StringBuilder();
+            for (String line; (line = r.readLine()) != null; ) {
+                total.append(line).append('\n');
+            }
+    
+            return total.toString();
+    
+    
+    
+        }catch (Exception e) {
+            return null;
+        }
+    }
+
 }
