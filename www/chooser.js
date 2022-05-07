@@ -1,3 +1,7 @@
+let ReadFile = (uri) => new Promise((resolve, reject) => {
+    cordova.exec(resolve, reject, "Chooser", "readFile", [uri]);
+});
+
 module.exports = {
     getFiles: function (accept, successCallback, failureCallback) {
         var result = new Promise(function (resolve, reject) {
@@ -29,4 +33,10 @@ module.exports = {
 
         return result;
     },
+    readFile: function (uri) {
+        return ReadFile(uri)
+            .catch(reason => {
+                return Promise.reject(reason);
+            });
+    }
 };

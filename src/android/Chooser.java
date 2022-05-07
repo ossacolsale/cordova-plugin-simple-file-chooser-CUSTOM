@@ -71,6 +71,9 @@ public class Chooser extends CordovaPlugin {
             if (action.equals(Chooser.ACTION_OPEN)) {
                 this.chooseFile(callbackContext, args.getString(0));
                 return true;
+            } else if (action.equals("readFile")) {
+                this.readFileAction(callbackContext, Uri.parse(args.getString(0)));
+                return true;
             }
         } catch (JSONException err) {
             this.callback.error("Execute failed: " + err.toString());
@@ -142,6 +145,16 @@ public class Chooser extends CordovaPlugin {
     
         }catch (Exception e) {
             return null;
+        }
+    }
+
+    private void readFileAction (CallbackContext callbackContext, Uri uri) {
+        try {
+            String content = this.readFile(uri);
+            callbackContext.success(content);
+        } catch (Exception e) {
+            callbackContext.error(e.getMessage());
+            e.printStackTrace();
         }
     }
 
