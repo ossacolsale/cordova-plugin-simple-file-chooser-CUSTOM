@@ -1,6 +1,5 @@
 declare class chooser {
-    static open (accept: string, successCallback: ()=>any, failureCallback: ()=>any): Promise<FileChooserResult>;
-    static open (successCallback: ()=>any, failureCallback: ()=>any): Promise<FileChooserResult>;
+    static getFiles (accept: string, successCallback: ()=>any, failureCallback: ()=>any): Promise<Array<FileChooserResult>>;
     static readFile (uri: string): Promise<string>;
 }
 
