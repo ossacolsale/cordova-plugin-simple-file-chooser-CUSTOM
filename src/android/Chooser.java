@@ -49,14 +49,17 @@ public class Chooser extends CordovaPlugin {
     private CallbackContext callback;
 
     public void chooseFile(CallbackContext callbackContext, String accept) {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        //Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.setType("*/*");
+        
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+
         intent.putExtra(Intent.EXTRA_MIME_TYPES, accept.split(","));
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         //intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
-        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        
 
         Intent chooser = Intent.createChooser(intent, "Select File");
         cordova.startActivityForResult(this, chooser, Chooser.PICK_FILE_REQUEST);
@@ -89,14 +92,20 @@ public class Chooser extends CordovaPlugin {
         try {
             if (requestCode == Chooser.PICK_FILE_REQUEST && this.callback != null) {
                 if (resultCode == Activity.RESULT_OK) {
+                    final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
                     JSONArray files = new JSONArray();
                     if (data.getClipData() != null) {
                         for (int i = 0; i < data.getClipData().getItemCount(); i++) {
-                            files.put(processFileUri(data.getClipData().getItemAt(i).getUri()));
+                            Uri uri = data.getClipData().getItemAt(i).getUri();
+                            this.cordova.getActivity().getContentResolver().takePersistableUriPermission(uri, takeFlags);
+                            files.put(processFileUri(uri));
+                            
                         }
                         this.callback.success(files.toString());
                     } else if (data.getData() != null) {
-                        files.put(processFileUri(data.getData()));
+                        Uri uri = data.getData();
+                        this.cordova.getActivity().getContentResolver().takePersistableUriPermission(uri, takeFlags);
+                        files.put(processFileUri(uri));
                         this.callback.success(files.toString());
                     } else {
                         this.callback.error("File URI was null.");
@@ -114,6 +123,7 @@ public class Chooser extends CordovaPlugin {
 
     public JSONObject processFileUri(Uri uri) {
         ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
+
         String name = Chooser.getDisplayName(contentResolver, uri);
         String mediaType = contentResolver.getType(uri);
         if (mediaType == null || mediaType.isEmpty()) {
