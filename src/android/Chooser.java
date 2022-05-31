@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.provider.DocumentsContract;
 import android.util.Base64;
 
 import java.io.ByteArrayOutputStream;
@@ -14,8 +15,10 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.lang.Exception;
+import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.File;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -26,7 +29,9 @@ import org.json.JSONObject;
 
 public class Chooser extends CordovaPlugin {
     private static final String ACTION_OPEN = "getFiles";
+    private static final String ACTION_GRANT_DIR = "grantDir";
     private static final int PICK_FILE_REQUEST = 1;
+    private static final int GRANT_DIR_REQUEST = 2;
     private static final String TAG = "Chooser";
 
     public static String getDisplayName(ContentResolver contentResolver, Uri uri) {
@@ -47,6 +52,30 @@ public class Chooser extends CordovaPlugin {
     }
 
     private CallbackContext callback;
+
+    public void grantDirectory(CallbackContext callbackContext, String startFileUri) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+
+        Uri fileUri = Uri.parse(startFileUri);
+        File file= new File(fileUri.getPath());
+        String startUri = startFileUri.split(file.getName())[0];
+
+        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, Uri.parse(startUri));
+        
+        /*intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);*/
+
+        Intent chooser = Intent.createChooser(intent, "Select File");
+        cordova.startActivityForResult(this, chooser, Chooser.GRANT_DIR_REQUEST);
+
+        //cordova.startActivityForResult(this, intent, Chooser.GRANT_DIR_REQUEST);
+
+        PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
+        pluginResult.setKeepCallback(true);
+        this.callback = callbackContext;
+        callbackContext.sendPluginResult(pluginResult);
+    }
 
     public void chooseFile(CallbackContext callbackContext, String accept) {
         //Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
@@ -75,6 +104,9 @@ public class Chooser extends CordovaPlugin {
         try {
             if (action.equals(Chooser.ACTION_OPEN)) {
                 this.chooseFile(callbackContext, args.getString(0));
+                return true;
+            } else if (action.equals(Chooser.ACTION_GRANT_DIR)) {
+                this.grantDirectory(callbackContext, args.getString(0));
                 return true;
             } else if (action.equals("readFile")) {
                 this.readFileAction(callbackContext, Uri.parse(args.getString(0)));
@@ -109,6 +141,28 @@ public class Chooser extends CordovaPlugin {
                         this.callback.success(files.toString());
                     } else {
                         this.callback.error("File URI was null.");
+                    }
+                } else if (resultCode == Activity.RESULT_CANCELED) {
+                    this.callback.error("RESULT_CANCELED");
+                } else {
+                    this.callback.error(resultCode);
+                }
+            } else
+            if (requestCode == Chooser.GRANT_DIR_REQUEST && this.callback != null) {
+                if (resultCode == Activity.RESULT_OK) {
+                    final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+                    if (data.getClipData() != null) {
+                        for (int i = 0; i < data.getClipData().getItemCount(); i++) {
+                            Uri uri = data.getClipData().getItemAt(i).getUri();
+                            this.cordova.getActivity().getContentResolver().takePersistableUriPermission(uri, takeFlags);
+                        }
+                        this.callback.success("ok");
+                    } else if (data.getData() != null) {
+                        Uri uri = data.getData();
+                        this.cordova.getActivity().getContentResolver().takePersistableUriPermission(uri, takeFlags);
+                        this.callback.success("ok");
+                    } else {
+                        this.callback.error("Directory URI was null.");
                     }
                 } else if (resultCode == Activity.RESULT_CANCELED) {
                     this.callback.error("RESULT_CANCELED");

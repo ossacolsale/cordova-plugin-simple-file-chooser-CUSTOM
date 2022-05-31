@@ -33,6 +33,35 @@ module.exports = {
 
         return result;
     },
+    grantDir: function (startFile, successCallback, failureCallback) {
+        var result = new Promise(function (resolve, reject) {
+            cordova.exec(
+                
+                function (res) {
+                    try {
+                        resolve(res == 'ok');
+                    } catch (err) {
+                        reject(err);
+                    }
+                },
+                reject,
+                'Chooser',
+                'grantDir',
+                [
+                    startFile
+                ]
+            );
+        });
+
+        if (typeof successCallback === 'function') {
+            result.then(successCallback);
+        }
+        if (typeof failureCallback === 'function') {
+            result.catch(failureCallback);
+        }
+
+        return result;
+    },
     readFile: function (uri) {
         return ReadFile(uri)
             .catch(reason => {
